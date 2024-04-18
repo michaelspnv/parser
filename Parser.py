@@ -1,9 +1,10 @@
 from bs4 import BeautifulSoup
 import requests
+import openpyxl
 
 
 def parse():
-    url = 'https://www.imdb.com/chart/top/?ref_=nv_mv_250'
+    url = 'https://omsk.cian.ru/kupit-kvartiru/'
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_4) AppleWebKit/537.36 '
                       '(KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36',
@@ -12,16 +13,35 @@ def parse():
     page = requests.get(url, headers=headers)
     soup = BeautifulSoup(page.text, "html.parser")
 
-    result = {}
-    names = []
+    data = soup.findAll('div', class_='_93444fe79c--link--DqDOy')
+    prices = soup.findAll('span', class_='_93444fe79c--color_black_100--Ephi7 _93444fe79c--lineHeight_28px--KFXmc '
+                                         '_93444fe79c--fontWeight_bold--BbhnX _93444fe79c--fontSize_22px--sFuaL '
+                                         '_93444fe79c--display_block--KYb25 _93444fe79c--text--e4SBY '
+                                         '_93444fe79c--text_letterSpacing__normal--tfToq')
 
-    name_block = soup.findAll('a', class_='ipc-title-link-wrapper')
-    for data in name_block:
-        parsed_name = data.h3.text
-        names.append(parsed_name.split(" ", 1)[1].strip())
+    result = []
 
-    rate_block = soup.findAll('span', class_='ratingGroup--imdb-rating')
-    for i in range(len(rate_block)):
-        result[names[i]] = float(rate_block[i].text[:3])
+    for i in range(len(data)):
+        current = []
+        current.append(data[i].div.a.span.span.text)
+        if data[i].div.a.div:
+            current.append(data[i].div.a.div.span.text)
+        else:
+            current.append('-')
+        current.append(prices[i].text)
 
-    print(result)
+        result.append(current)
+
+    return result
+
+
+def write_to_excel(data):
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.append(['Текст объявления', 'Информация о квартире', 'Цена'])
+
+    for item in data:
+        sheet.append(item)
+
+    workbook.save('cian-info.xlsx')
+    print('Данные успешно записаны в файл cian-info.xlsx')
